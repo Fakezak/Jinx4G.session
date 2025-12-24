@@ -1,23 +1,25 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>Jinx4G Session ID</title>
-  <link rel="stylesheet" href="style.css">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Jinx4G Session ID</title>
+<link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <div class="box">
-    <h1>Jinx4G Session ID</h1>
 
-    <input id="phone" placeholder="WhatsApp Number (country code)">
-    <button onclick="getPair()">Get Pair Code</button>
+<div class="container">
+  <h1>Jinx4G Session ID</h1>
+  <p class="subtitle">Link your mini device via WhatsApp</p>
 
-    <div id="codeBox"></div>
+  <input id="phone" placeholder="+1876xxxxxxx">
+  <button onclick="getPair()">Get Pair Code</button>
 
-    <p class="hint">
-      Open WhatsApp → Linked Devices → Enter Pair Code
-    </p>
-  </div>
+  <div id="codeBox"></div>
 
-  <script src="script.js"></script>
+  <p class="hint">Open WhatsApp → Linked Devices → Enter Pair Code</p>
+</div>
+
+<script src="script.js"></script>
 </body>
 </html>
