@@ -1,0 +1,51 @@
+body {
+  margin: 0;
+  height: 100vh;
+  background: url("https://i.imgur.com/9ZQZ4zK.jpg") center/cover no-repeat;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-family: Arial;
+}
+
+.box {
+  background: rgba(0,0,0,0.85);
+  padding: 30px;
+  border-radius: 15px;
+  width: 90%;
+  max-width: 360px;
+  color: white;
+  text-align: center;
+}
+
+input {
+  width: 100%;
+  padding: 12px;
+  margin-top: 10px;
+  border-radius: 8px;
+  border: none;
+}
+
+button {
+  width: 100%;
+  padding: 12px;
+  margin-top: 15px;
+  border-radius: 8px;
+  border: none;
+  background: linear-gradient(90deg, red, purple);
+  color: white;
+  font-weight: bold;
+}
+
+.code {
+  font-size: 26px;
+  letter-spacing: 4px;
+  margin-top: 15px;
+  color: #ff4dff;
+}
+
+.hint {
+  font-size: 12px;
+  opacity: 0.7;
+  margin-top: 10px;
+}
