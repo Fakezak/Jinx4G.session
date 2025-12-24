@@ -1,67 +1,121 @@
+/**
+ * Jinx4G Session ID Server
+ * Uses real WhatsApp MD pairing (mini device)
+ */
+
 const express = require("express");
-const { default: makeWASocket, useMultiFileAuthState } = require("@whiskeysockets/baileys");
 const crypto = require("crypto");
 const path = require("path");
+
+const {
+  default: makeWASocket,
+  useMultiFileAuthState,
+  DisconnectReason
+} = require("@whiskeysockets/baileys");
 
 const app = express();
 app.use(express.json());
 app.use(express.static("public"));
 
 let sock;
-let currentPhone = null;
+let pairingInProgress = false;
+let targetNumber = null;
 
-async function startBot(phone) {
-  currentPhone = phone;
+/**
+ * Start WhatsApp socket (only once)
+ */
+async function startSocket(phoneNumber) {
+  if (pairingInProgress) {
+    throw new Error("Pairing already in progress");
+  }
+
+  pairingInProgress = true;
+  targetNumber = phoneNumber.replace(/[^0-9]/g, "");
 
   const { state, saveCreds } = await useMultiFileAuthState("./sessions");
 
   sock = makeWASocket({
     auth: state,
-    printQRInTerminal: false
+    printQRInTerminal: false,
+    browser: ["Jinx4G", "Chrome", "1.0"]
   });
 
   sock.ev.on("creds.update", saveCreds);
 
-  // When pairing is complete
   sock.ev.on("connection.update", async (update) => {
-    if (update.connection === "open") {
+    const { connection, lastDisconnect } = update;
+
+    if (connection === "open") {
+      // ✅ Device successfully linked
       const sessionId =
         "Jinx4G-MD." + crypto.randomBytes(10).toString("hex");
 
-      await sock.sendMessage(
-        `${currentPhone}@s.whatsapp.net`,
-        {
-          text:
-            `✅ *Jinx4G Session Linked*\n\n` +
-            `🔑 Session ID:\n${sessionId}\n\n` +
-            `⚠️ Keep this private`
-        }
-      );
+      try {
+        await sock.sendMessage(
+          `${targetNumber}@s.whatsapp.net`,
+          {
+            text:
+              `✅ *Jinx4G Session Linked*\n\n` +
+              `🔑 *Session ID:*\n${sessionId}\n\n` +
+              `⚠️ Do NOT share this ID\n` +
+              `Use it to deploy your bot`
+          }
+        );
+      } catch (e) {
+        console.error("Failed to send session ID:", e);
+      }
 
-      console.log("SESSION ID:", sessionId);
+      pairingInProgress = false;
+      targetNumber = null;
+    }
+
+    if (connection === "close") {
+      pairingInProgress = false;
+
+      const reason =
+        lastDisconnect?.error?.output?.statusCode;
+
+      if (reason !== DisconnectReason.loggedOut) {
+        console.log("🔁 Socket closed, waiting for next pairing");
+      }
     }
   });
 
-  // Generate pairing code
+  // 🔐 Request pairing code from WhatsApp
   if (!sock.authState.creds.registered) {
-    const code = await sock.requestPairingCode(phone);
-    return code;
+    const pairCode = await sock.requestPairingCode(targetNumber);
+    return pairCode;
+  } else {
+    pairingInProgress = false;
+    throw new Error("Already registered");
   }
 }
 
-// API: Get Pair Code
+/**
+ * API: Get Pair Code
+ */
 app.post("/pair", async (req, res) => {
-  const phone = req.body.phone;
-  if (!phone) return res.status(400).json({ error: "Phone required" });
+  const { phone } = req.body;
+
+  if (!phone) {
+    return res.status(400).json({ error: "Phone number required" });
+  }
 
   try {
-    const pairCode = await startBot(phone);
-    res.json({ pairCode });
-  } catch (e) {
-    res.status(500).json({ error: "Failed to generate pair code" });
+    const code = await startSocket(phone);
+    res.json({ pairCode: code });
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).json({
+      error: "Failed to generate pairing code. Please wait and try again."
+    });
   }
 });
 
-app.listen(3000, () =>
-  console.log("🌐 Jinx4G Session Site Running")
-);
+/**
+ * Start server
+ */
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log(`🌊 Jinx4G Session Server running on port ${PORT}`);
+});
