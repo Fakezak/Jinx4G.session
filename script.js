@@ -7,22 +7,27 @@ async function getPair() {
     return;
   }
 
-  codeBox.innerHTML = "Generating pair code...";
+  codeBox.innerHTML = "⏳ Generating pair code... please wait";
 
-  const res = await fetch("/pair", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ phone })
-  });
+  try {
+    const res = await fetch("/pair", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ phone })
+    });
 
-  const data = await res.json();
+    const data = await res.json();
 
-  if (data.pairCode) {
-    codeBox.innerHTML = `
-      <div class="code">${data.pairCode}</div>
-      <p>Enter this in WhatsApp</p>
-    `;
-  } else {
-    codeBox.innerHTML = "Failed to generate code";
+    if (data.pairCode) {
+      codeBox.innerHTML = `
+        <div class="code">${data.pairCode}</div>
+        <p>Enter this in WhatsApp</p>
+      `;
+    } else {
+      codeBox.innerHTML = "❌ Failed to generate code. Try again.";
+    }
+  } catch (err) {
+    codeBox.innerHTML = "❌ Server error. Check console.";
+    console.error(err);
   }
 }
