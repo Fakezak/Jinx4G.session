@@ -2,15 +2,12 @@ async function getPair() {
   const phone = document.getElementById("phone").value;
   const codeBox = document.getElementById("codeBox");
 
-  if (!phone) {
-    alert("Enter your WhatsApp number");
-    return;
-  }
+  if (!phone) { alert("Enter your WhatsApp number"); return; }
 
   codeBox.innerHTML = "⏳ Generating pair code... please wait";
 
   try {
-    const res = await fetch("/pair", {
+    const res = await fetch("/api/pair", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ phone })
