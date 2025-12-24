@@ -23,11 +23,13 @@ async function getPair() {
         <div class="code">${data.pairCode}</div>
         <p>Enter this in WhatsApp</p>
       `;
+    } else if (data.error) {
+      codeBox.innerHTML = `❌ ${data.error}`;
     } else {
-      codeBox.innerHTML = "❌ Failed to generate code. Try again.";
+      codeBox.innerHTML = "❌ Unknown server error";
     }
   } catch (err) {
-    codeBox.innerHTML = "❌ Server error. Check console.";
+    codeBox.innerHTML = `❌ Server error: ${err.message}`;
     console.error(err);
   }
 }
